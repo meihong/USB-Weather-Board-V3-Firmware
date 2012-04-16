@@ -14,7 +14,7 @@ This modified firmware is for you who's facing such problems.
 
 ### How rain gauge miscount
 
-Long signal cables on Weather Meters catche much noise or radiation as you know.  USB Weather Board set this signal line HIGH and, if it falls to LOW, this fancy board counts as a rain gauge bucket tips.  Sometimes, maybe 10 through 20 times a day, noises around of it make this signal falling and it counts as it rains.  This is the reason that a rain gauge miscounts, I think.
+Long signal cables on Weather Meters catch much noise or radiation as you know.  USB Weather Board set this signal line HIGH and, if it falls to LOW, this fancy board counts as a rain gauge bucket tips.  Sometimes, maybe 10 through 20 times a day, noises around of it make this signal falling and it counts as it rains.  This is the reason that a rain gauge miscounts, I think.
 
 When the bucket tips, the signal should move HIGH to LOW and LOW to HIGH.  Actually, however, it moves HIGH to LOW, HIGH to LOW, and LOW to HIGH.  At this time, this firmware doesn't count up and ignores second falling.  there's one more problem, more serious one, is that sometimes it moves HIGH to LOW and keeps LOW.  This falling keeps until next tipping and it means that one tipping that should be counted is ignored and the rainfall is less than actual.
 
