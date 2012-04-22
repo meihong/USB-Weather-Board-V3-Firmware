@@ -160,7 +160,7 @@ void rainIRQ()
       } else {
         rainpulseinterval = rainpulseinterval - rainpulsetime;
       }
-      if (rainpulseinterval > 50000)
+      if (rainpulseinterval > 100000)
       {
         rain++;
         rainlast  = raintime;
