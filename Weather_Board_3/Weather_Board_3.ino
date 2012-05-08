@@ -22,6 +22,7 @@
 // -your friends at SparkFun
 
 // Revision history
+// 1.2dame8 optimized 2012/5/08
 // 1.2dame7 fixed problem that rain gauge signal keeps low 2012/4/15
 // 1.2dame6 rain gauge counting method changed 2012/4/01
 // 1.2dame2 changed to display humidity as a decimal 2012/2/16
@@ -75,7 +76,8 @@ unsigned int windRPM, stopped;
 volatile unsigned long tempwindRPM, windtime, windlast, windinterval;
 volatile unsigned char windintcount;
 volatile boolean gotwspeed;
-volatile unsigned long raintime, rainlast, rainstate, rainpulsetime, rainpulseinterval, rain;
+volatile unsigned long raintime, rainpulsetime, rainpulseinterval, rain;
+volatile boolean rainstate;
 unsigned long watchdogcount, watchdoginterval;
 
 // constant conversion factors
@@ -144,32 +146,24 @@ void rainIRQ()
 // if the Weather Meters are attached, count rain gauge bucket tips as they occur
 // activated by the magnet and reed switch in the rain gauge, attached to input D2
 {
-  raintime = micros();
-  if (digitalRead(RAIN) == LOW)
-  {
-    if (rainstate != 1) {
-      rainstate     = 1;
-      rainpulsetime = raintime;
+  if (digitalRead(RAIN) == LOW) {
+    if (!rainstate) {
+      rainstate     = true;
+      rainpulsetime = micros();
+    }
+  } else if (rainstate) {
+    raintime = micros();
+    if (raintime < rainpulsetime) {
+      rainpulseinterval = 0xfffffffful - rainpulsetime + raintime;
+    } else {
+      rainpulseinterval = raintime - rainpulsetime;
+    }
+    if (rainpulseinterval > 10000) {
+      rain++;
+      rainstate = false;
     }
   } else {
-    if (rainstate == 1)
-    {
-      rainpulseinterval = raintime;
-      if (rainpulseinterval < rainpulsetime) {
-        rainpulseinterval = 0xffffffff - raintime + rainpulseinterval;
-      } else {
-        rainpulseinterval = rainpulseinterval - rainpulsetime;
-      }
-      if (rainpulseinterval > 80000)
-      {
-        rain++;
-        rainlast  = raintime;
-        rainstate = 0;
-      }
-    } else {
-      rainlast  = raintime;
-      rainstate = 0;
-    }
+    rainstate = false;
   }
 }
 
@@ -254,8 +248,7 @@ void setup()
   if (weather_meters_attached)
   {
     // attach external interrupt pins to IRQ functions
-    rainstate = 0;
-    rainlast  = 0;
+    rainstate = false;
     attachInterrupt(0,rainIRQ,CHANGE);
     attachInterrupt(1,wspeedIRQ,FALLING);
     
@@ -752,25 +745,21 @@ void loop()
         loopend = millis(); // we're done with the menu, break out of the do-while
       }
     }
+
+    if (rainstate) {
+      // check if a rain gauge is stuck.
+      watchdoginterval = micros();
+      if (watchdoginterval < rainpulsetime) {
+        watchdoginterval = 0xffffffff - rainpulsetime + watchdoginterval;
+      } else {
+        watchdoginterval = watchdoginterval - rainpulsetime;
+      }
+      if (watchdoginterval > 1000000) {
+        rainstate = false;
+      }
+    }
   }
   while(millis() < loopend);
-
-  if (rainstate == 1) {
-    // check if a rain gauge is stuck.
-    watchdoginterval = micros();
-    if (watchdoginterval < rainpulsetime) {
-      watchdoginterval = 0xffffffff - rainpulsetime + watchdoginterval;
-    } else {
-      watchdoginterval = watchdoginterval - rainpulsetime;
-    }
-    // treats as tipped.
-   if (watchdoginterval > 3000000) {
-     rain++;
-     rainpulseinterval = watchdoginterval;
-     rainlast          = micros();
-     rainstate         = 0;
-    }
-  }
 }
 
 float get_wind_direction() 
@@ -835,7 +824,7 @@ void menu()
 
   Serial.println();
   Serial.print("SparkFun USB Weather Board V3 firmware version ");
-  Serial.print(version_major,DEC); Serial.print(".");  Serial.print(version_minor,DEC); Serial.println(" dame7");
+  Serial.print(version_major,DEC); Serial.print(".");  Serial.print(version_minor,DEC); Serial.println(" dame8");
   Serial.print("free RAM: "); Serial.print(freeMemory()); Serial.println(" bytes");
   Serial.println();
   
